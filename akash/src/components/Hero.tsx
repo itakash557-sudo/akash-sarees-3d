@@ -7,13 +7,6 @@ import { IconArrow, IconPlay } from './icons';
 const FPS = 24;
 const FRAMES = 159;
 
-const SECTIONS = [
-  { from: 0, to: 0.23 },
-  { from: 0.23, to: 0.47 },
-  { from: 0.47, to: 0.73 },
-  { from: 0.73, to: 1.0 },
-];
-
 export function Hero({ ready: _ready }: { ready?: boolean }) {
   const { setFilter } = useStore();
   const trackRef = useRef<HTMLElement>(null);
@@ -22,7 +15,6 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
 
   const [loaded, setLoaded] = useState(false);
   const [loadPct, setLoadPct] = useState(0);
-  const [activeSection, setActiveSection] = useState(0);
   const [scrollProg, setScrollProg] = useState(0);
 
   const seekingRef = useRef(false);
@@ -190,16 +182,6 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
 
       seek(Math.round(currentFrameRef.current));
 
-      let active = 0;
-      for (let i = 0; i < SECTIONS.length; i++) {
-        const s = SECTIONS[i];
-        if (p >= s.from && (p < s.to || s.to === 1)) {
-          active = i;
-          break;
-        }
-      }
-      setActiveSection(active);
-
       raf = requestAnimationFrame(tick);
     };
 
@@ -209,14 +191,6 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
       cancelAnimationFrame(raf);
     };
   }, []);
-
-  const scrollToSection = (p: number) => {
-    const track = trackRef.current;
-    if (!track) return;
-    const maxScroll = track.offsetHeight - window.innerHeight;
-    const top = track.getBoundingClientRect().top + window.scrollY;
-    window.scrollTo({ top: top + p * maxScroll, behavior: 'smooth' });
-  };
 
   // Final CTA visibility when showroom is revealed (progress > 0.72)
   const ctaOpacity = Math.max(0, Math.min(1, (scrollProg - 0.72) / 0.16));
@@ -263,20 +237,6 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
             </button>
           </div>
         )}
-
-        {/* Side rail indicator lines */}
-        <nav className="silk-rail" aria-label="Scroll Progress">
-          {SECTIONS.map((s, i) => (
-            <button
-              key={i}
-              className={activeSection === i ? 'on' : ''}
-              onClick={() => scrollToSection(s.from + 0.06)}
-              aria-label={`Scroll to stage ${i + 1}`}
-            >
-              <i />
-            </button>
-          ))}
-        </nav>
 
         {/* Accurate loading percentage indicator */}
         <div className="silk-loader" style={{ opacity: loaded ? 0 : 1 }}>

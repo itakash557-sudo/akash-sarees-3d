@@ -39,6 +39,14 @@ const copy = () => {
   if (fs.existsSync('video.mp4')) {
     fs.copyFileSync('video.mp4', 'dist/video.mp4');
   }
+  fs.copyFileSync('src/styles.css', '../styles.css');
+  fs.copyFileSync('index.html', '../index.html');
+};
+
+const syncRootApp = () => {
+  if (fs.existsSync('dist/app.js')) {
+    fs.copyFileSync('dist/app.js', '../app.js');
+  }
 };
 
 const opts = {
@@ -61,9 +69,10 @@ copy();
 if (watch) {
   const ctx = await esbuild.context(opts);
   await ctx.watch();
-  fs.watch('src/styles.css', copy);
+  fs.watch('src/styles.css', () => { copy(); syncRootApp(); });
   console.log('watching...');
 } else {
   await esbuild.build(opts);
+  syncRootApp();
   console.log('build complete');
 }
