@@ -55,7 +55,7 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
     shownFrameRef.current = frame;
 
     const dur = v.duration || (FRAMES / FPS);
-    const targetTime = Math.max(0, Math.min(dur - 0.02, (frame + 0.5) / FPS));
+    const targetTime = Math.max(0, Math.min(dur - 0.05, (frame + 0.5) / FPS));
     v.currentTime = targetTime;
   };
 
@@ -94,8 +94,9 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
 
     const onLoaded = () => {
       if (unmounted) return;
-      setLoaded(true);
       handleResize();
+      paint();
+      setLoaded(true);
       video.currentTime = 0.5 / FPS;
     };
     video.addEventListener('loadeddata', onLoaded, { once: true });
@@ -117,8 +118,9 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
     };
   }, []);
 
-  // Main scroll-scrub loop with smooth spring interpolation
+  // Main scroll-scrub loop with smooth spring interpolation - only starts when video is ready
   useEffect(() => {
+    if (!loaded) return;
     let raf = 0;
     const track = trackRef.current;
 
@@ -150,7 +152,7 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
     return () => {
       cancelAnimationFrame(raf);
     };
-  }, []);
+  }, [loaded]);
 
   // Final CTA visibility when showroom is revealed (progress > 0.72)
   const ctaOpacity = Math.max(0, Math.min(1, (scrollProg - 0.72) / 0.16));
@@ -165,6 +167,34 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
           role="img"
         />
         <div className="silk-scrim" />
+
+        {/* Loading fallback until first frame is decoded */}
+        {!loaded && (
+          <div
+            className="silk-hero-fallback"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#0a0506',
+              zIndex: 5,
+              transition: 'opacity 0.3s ease',
+            }}
+          >
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                border: '2px solid rgba(224, 178, 90, 0.25)',
+                borderTopColor: '#e0b25a',
+                borderRadius: '50%',
+                animation: 'spin 0.8s linear infinite',
+              }}
+            />
+          </div>
+        )}
 
         {/* Action buttons appear gracefully once showroom is fully revealed */}
         {ctaOpacity > 0.02 && (
