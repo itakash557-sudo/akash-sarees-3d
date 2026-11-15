@@ -39,8 +39,14 @@ const copy = () => {
   if (fs.existsSync('video.mp4')) {
     fs.copyFileSync('video.mp4', 'dist/video.mp4');
   }
+  if (fs.existsSync('logo-intro.mp4')) {
+    fs.copyFileSync('logo-intro.mp4', 'dist/logo-intro.mp4');
+  }
   fs.copyFileSync('src/styles.css', '../styles.css');
   fs.copyFileSync('index.html', '../index.html');
+  if (fs.existsSync('logo-intro.mp4')) {
+    fs.copyFileSync('logo-intro.mp4', '../logo-intro.mp4');
+  }
 };
 
 const syncRootApp = () => {

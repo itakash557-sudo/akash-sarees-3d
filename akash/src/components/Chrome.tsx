@@ -6,27 +6,61 @@ import { inr, onScroll, reducedMotion, scrollToId } from '../lib/hooks';
 import { useStore } from '../lib/store';
 import { IconArrow, IconBag, IconClose, IconHeart, IconMenu, IconMinus, IconPlus, IconSearch, IconUser, IconWhatsApp } from './icons';
 
-/* ───────── Preloader: macro paisley fabric → curtain lift ───────── */
+/* ───────── Preloader: cinematic logo intro video → curtain lift ───────── */
 export function Preloader({ onDone }: { onDone: () => void }) {
   const [phase, setPhase] = useState<'in' | 'out' | 'gone'>('in');
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const handleFinish = () => {
+    setPhase((prev) => {
+      if (prev !== 'in') return prev;
+      setTimeout(() => {
+        setPhase('gone');
+        document.body.style.overflow = '';
+        onDone();
+      }, 700);
+      return 'out';
+    });
+  };
+
   useEffect(() => {
-    const r = reducedMotion();
     document.body.style.overflow = 'hidden';
-    const a = setTimeout(() => setPhase('out'), r ? 100 : 600);
-    const b = setTimeout(() => { setPhase('gone'); document.body.style.overflow = ''; onDone(); }, r ? 250 : 1100);
-    return () => { clearTimeout(a); clearTimeout(b); document.body.style.overflow = ''; };
-    // eslint-disable-next-line
+    if (reducedMotion()) {
+      handleFinish();
+      return;
+    }
+    // Auto transition out after the logo animation plays (5.5s fallback)
+    const timer = setTimeout(handleFinish, 5500);
+    return () => {
+      clearTimeout(timer);
+      document.body.style.overflow = '';
+    };
   }, []);
+
   if (phase === 'gone') return null;
+
   return (
-    <div className={`preloader ${phase}`} aria-hidden="true">
-      <div className="pl-fabric" />
+    <div className={`preloader ${phase}`} onClick={handleFinish} role="dialog" aria-label="Akash Sarees brand intro">
+      <video
+        ref={videoRef}
+        className="pl-video"
+        src="logo-intro.mp4"
+        autoPlay
+        muted
+        playsInline
+        onEnded={handleFinish}
+      />
       <div className="pl-vignette" />
-      <div className="pl-mark">
-        <span className="pl-brand-anim">{site.wordmark}</span>
-        <small className="pl-sub-anim">{site.wordmarkSub}</small>
-      </div>
-      <div className="pl-bar"><i /></div>
+      <button
+        className="pl-skip"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleFinish();
+        }}
+        aria-label="Skip logo animation"
+      >
+        Skip &rarr;
+      </button>
     </div>
   );
 }
