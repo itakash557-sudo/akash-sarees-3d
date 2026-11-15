@@ -64,7 +64,7 @@ const ROWS: Row[] = [
 
 const slugify = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
-export const PRODUCTS: Product[] = ROWS.map((r, i) => {
+export let PRODUCTS: Product[] = ROWS.map((r, i) => {
   const [name, fabric, collection, palette, price, flags, mrp, stock = 5, extra = []] = r;
   const variant = i % 4;
   const art = sareeArt(palette, variant);
@@ -85,6 +85,10 @@ export const PRODUCTS: Product[] = ROWS.map((r, i) => {
     image: img, images: real.length ? real : [art, sareeArt(palette, (variant + 1) % 4), sareeArt(palette, (variant + 2) % 4)], real: real.length > 0,
   };
 });
+
+export function setLiveProducts(list: Product[]) {
+  PRODUCTS = list;
+}
 
 export const byId = (id: string) => PRODUCTS.find((p) => p.id === id);
 export const inCollection = (slug: string) => (slug === 'all' ? PRODUCTS : PRODUCTS.filter((p) => p.collection === slug || p.tags.includes(slug)));

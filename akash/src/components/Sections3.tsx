@@ -211,6 +211,7 @@ export function Footer() {
           <li><button onClick={() => setPolicy('returns')}>Return policy</button></li>
           <li><button onClick={() => setPolicy('privacy')}>Privacy policy</button></li>
           <li><button onClick={() => setPolicy('terms')}>Terms &amp; conditions</button></li>
+          <li><a href="#admin" style={{ opacity: 0.75, color: '#e0b25a', fontWeight: 600 }}>Admin Portal 🔒</a></li>
         </ul></div>
         <div className="foot-news"><h4>Stay updated</h4><p>New collections and festive edits.</p><NewsletterForm compact /></div>
       </div>
