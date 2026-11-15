@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import { StoreProvider } from './lib/store';
 import { Announcement, Drawer, Nav, PolicyModal, Preloader, QuickView, SearchOverlay, Toasts } from './components/Chrome';
 import { OrderModal } from './components/OrderModal';
@@ -39,6 +40,7 @@ export default function App() {
       <SearchOverlay />
       <PolicyModal />
       <Toasts />
+      <SpeedInsights />
     </StoreProvider>
   );
 }
