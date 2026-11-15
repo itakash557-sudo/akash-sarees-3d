@@ -50,7 +50,6 @@ export function Preloader({ onDone }: { onDone: () => void }) {
         playsInline
         onEnded={handleFinish}
       />
-      <div className="pl-vignette" />
       <button
         className="pl-skip"
         onClick={(e) => {
