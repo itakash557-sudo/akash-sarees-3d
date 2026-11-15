@@ -12,7 +12,6 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
   const trackRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const posterRef = useRef<HTMLImageElement | null>(null);
 
   const [loaded, setLoaded] = useState(false);
   const [scrollProg, setScrollProg] = useState(0);
@@ -23,16 +22,11 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
   const currentFrameRef = useRef(0);
   const targetFrameRef = useRef(0);
 
-  // Paint the current video frame or poster image onto the canvas with high fidelity
-  const paint = (source?: HTMLVideoElement | HTMLImageElement) => {
+  // Paint the current video frame onto the canvas with high fidelity
+  const paint = () => {
     const cv = canvasRef.current;
-    if (!cv) return;
-    const media = source || videoRef.current || posterRef.current;
-    if (!media) return;
-    if ('readyState' in media && media.readyState < 2 && posterRef.current) {
-      paint(posterRef.current);
-      return;
-    }
+    const v = videoRef.current;
+    if (!cv || !v || v.readyState < 2) return;
     const ctx = cv.getContext('2d');
     if (!ctx) return;
 
@@ -41,12 +35,12 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
 
     const cw = cv.width;
     const ch = cv.height;
-    const vw = ('videoWidth' in media ? media.videoWidth : media.naturalWidth) || 1280;
-    const vh = ('videoHeight' in media ? media.videoHeight : media.naturalHeight) || 720;
+    const vw = v.videoWidth || 1280;
+    const vh = v.videoHeight || 720;
     const s = Math.max(cw / vw, ch / vh);
     const w = vw * s;
     const h = vh * s;
-    ctx.drawImage(media, (cw - w) / 2, (ch - h) / 2, w, h);
+    ctx.drawImage(v, (cw - w) / 2, (ch - h) / 2, w, h);
   };
 
   const seek = (frame: number) => {
@@ -77,21 +71,10 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
     paint();
   };
 
-  // Initialize poster instantly, then stream video natively without blocking UI
+  // Initialize and stream video natively without blocking UI
   useEffect(() => {
     let unmounted = false;
 
-    // 1. Immediately paint lightweight 15KB poster so canvas is NEVER blank/black
-    const poster = new Image();
-    poster.src = 'images/hero-poster.webp';
-    posterRef.current = poster;
-    poster.onload = () => {
-      if (unmounted) return;
-      handleResize();
-      paint(poster);
-    };
-
-    // 2. Stream video natively via browser HTTP range requests (zero load delay)
     const video = document.createElement('video');
     video.muted = true;
     video.playsInline = true;
@@ -99,7 +82,7 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
     videoRef.current = video;
 
     const onSeeked = () => {
-      paint(video);
+      paint();
       seekingRef.current = false;
       if (pendingFrameRef.current !== null) {
         const next = pendingFrameRef.current;
@@ -131,7 +114,6 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
       video.removeEventListener('canplay', onLoaded);
       video.src = '';
       videoRef.current = null;
-      posterRef.current = null;
     };
   }, []);
 
