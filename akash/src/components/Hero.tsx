@@ -12,9 +12,9 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
   const trackRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const posterRef = useRef<HTMLImageElement | null>(null);
 
   const [loaded, setLoaded] = useState(false);
-  const [loadPct, setLoadPct] = useState(0);
   const [scrollProg, setScrollProg] = useState(0);
 
   const seekingRef = useRef(false);
@@ -22,13 +22,17 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
   const shownFrameRef = useRef(-1);
   const currentFrameRef = useRef(0);
   const targetFrameRef = useRef(0);
-  const blobUrlRef = useRef<string | null>(null);
 
-  // Paint the current video frame onto the canvas with high fidelity
-  const paint = () => {
+  // Paint the current video frame or poster image onto the canvas with high fidelity
+  const paint = (source?: HTMLVideoElement | HTMLImageElement) => {
     const cv = canvasRef.current;
-    const v = videoRef.current;
-    if (!cv || !v || v.readyState < 2) return;
+    if (!cv) return;
+    const media = source || videoRef.current || posterRef.current;
+    if (!media) return;
+    if ('readyState' in media && media.readyState < 2 && posterRef.current) {
+      paint(posterRef.current);
+      return;
+    }
     const ctx = cv.getContext('2d');
     if (!ctx) return;
 
@@ -37,12 +41,12 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
 
     const cw = cv.width;
     const ch = cv.height;
-    const vw = v.videoWidth || 1280;
-    const vh = v.videoHeight || 720;
+    const vw = ('videoWidth' in media ? media.videoWidth : media.naturalWidth) || 1280;
+    const vh = ('videoHeight' in media ? media.videoHeight : media.naturalHeight) || 720;
     const s = Math.max(cw / vw, ch / vh);
     const w = vw * s;
     const h = vh * s;
-    ctx.drawImage(v, (cw - w) / 2, (ch - h) / 2, w, h);
+    ctx.drawImage(media, (cw - w) / 2, (ch - h) / 2, w, h);
   };
 
   const seek = (frame: number) => {
@@ -73,9 +77,21 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
     paint();
   };
 
-  // Initialize and preload the video as a memory blob for instant zero-latency scrub
+  // Initialize poster instantly, then stream video natively without blocking UI
   useEffect(() => {
     let unmounted = false;
+
+    // 1. Immediately paint lightweight 15KB poster so canvas is NEVER blank/black
+    const poster = new Image();
+    poster.src = 'images/hero-poster.webp';
+    posterRef.current = poster;
+    poster.onload = () => {
+      if (unmounted) return;
+      handleResize();
+      paint(poster);
+    };
+
+    // 2. Stream video natively via browser HTTP range requests (zero load delay)
     const video = document.createElement('video');
     video.muted = true;
     video.playsInline = true;
@@ -83,7 +99,7 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
     videoRef.current = video;
 
     const onSeeked = () => {
-      paint();
+      paint(video);
       seekingRef.current = false;
       if (pendingFrameRef.current !== null) {
         const next = pendingFrameRef.current;
@@ -93,67 +109,29 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
     };
     video.addEventListener('seeked', onSeeked);
 
-    async function initVideo() {
-      let src = 'video.mp4';
-      try {
-        const res = await fetch('video.mp4');
-        const total = +(res.headers.get('content-length') || 0);
-        const reader = res.body?.getReader();
-        if (reader) {
-          const chunks: Uint8Array[] = [];
-          let received = 0;
-          for (;;) {
-            const { done, value } = await reader.read();
-            if (done || unmounted) break;
-            if (value) {
-              chunks.push(value);
-              received += value.length;
-              if (total > 0 && !unmounted) {
-                setLoadPct(Math.round((received / total) * 100));
-              }
-            }
-          }
-          if (!unmounted && chunks.length > 0) {
-            const blob = new Blob(chunks, { type: 'video/mp4' });
-            src = URL.createObjectURL(blob);
-            blobUrlRef.current = src;
-          }
-        }
-      } catch {
-        // Fallback to direct video src on local/file:// or network restrict
-      }
-
+    const onLoaded = () => {
       if (unmounted) return;
-      video.src = src;
-
-      await new Promise<void>((resolve) => {
-        const onLoaded = () => {
-          video.removeEventListener('loadeddata', onLoaded);
-          resolve();
-        };
-        video.addEventListener('loadeddata', onLoaded);
-        video.load();
-      });
-
-      if (unmounted) return;
-      setLoadPct(100);
       setLoaded(true);
       handleResize();
       video.currentTime = 0.5 / FPS;
-    }
+    };
+    video.addEventListener('loadeddata', onLoaded, { once: true });
+    video.addEventListener('canplay', onLoaded, { once: true });
 
-    initVideo();
+    video.src = 'video.mp4';
+    video.load();
+
     window.addEventListener('resize', handleResize);
 
     return () => {
       unmounted = true;
       window.removeEventListener('resize', handleResize);
       video.removeEventListener('seeked', onSeeked);
-      if (blobUrlRef.current) {
-        URL.revokeObjectURL(blobUrlRef.current);
-      }
+      video.removeEventListener('loadeddata', onLoaded);
+      video.removeEventListener('canplay', onLoaded);
       video.src = '';
       videoRef.current = null;
+      posterRef.current = null;
     };
   }, []);
 
@@ -237,11 +215,6 @@ export function Hero({ ready: _ready }: { ready?: boolean }) {
             </button>
           </div>
         )}
-
-        {/* Accurate loading percentage indicator */}
-        <div className="silk-loader" style={{ opacity: loaded ? 0 : 1 }}>
-          Loading {loadPct}%
-        </div>
 
         {/* Scroll hint indicator */}
         <div className="silk-hint" style={{ opacity: scrollProg > 0.03 ? 0 : 1 }}>

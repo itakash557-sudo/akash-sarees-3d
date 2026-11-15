@@ -12,8 +12,8 @@ export function Preloader({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     const r = reducedMotion();
     document.body.style.overflow = 'hidden';
-    const a = setTimeout(() => setPhase('out'), r ? 150 : 2400);
-    const b = setTimeout(() => { setPhase('gone'); document.body.style.overflow = ''; onDone(); }, r ? 400 : 3400);
+    const a = setTimeout(() => setPhase('out'), r ? 100 : 600);
+    const b = setTimeout(() => { setPhase('gone'); document.body.style.overflow = ''; onDone(); }, r ? 250 : 1100);
     return () => { clearTimeout(a); clearTimeout(b); document.body.style.overflow = ''; };
     // eslint-disable-next-line
   }, []);
