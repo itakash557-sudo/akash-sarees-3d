@@ -90,6 +90,8 @@ export function setLiveProducts(list: Product[]) {
   PRODUCTS = list;
 }
 
-export const byId = (id: string) => PRODUCTS.find((p) => p.id === id);
+export const byId = (id: string): Product => {
+  return PRODUCTS.find((p) => p.id === id) || PRODUCTS[0];
+};
 export const inCollection = (slug: string) => (slug === 'all' ? PRODUCTS : PRODUCTS.filter((p) => p.collection === slug || p.tags.includes(slug)));
 export const collectionBySlug = (slug: string) => COLLECTIONS.find((c) => c.slug === slug);

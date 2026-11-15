@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Component, ReactNode, ErrorInfo } from 'react';
 import { StoreProvider } from './lib/store';
 import { Announcement, Drawer, Nav, PolicyModal, Preloader, QuickView, SearchOverlay, Toasts } from './components/Chrome';
 import { OrderModal } from './components/OrderModal';
@@ -11,8 +11,22 @@ import { getLiveProducts, getLiveSettings } from './lib/supabase';
 import { setLiveProducts } from './data/catalog';
 import { site } from './config/site';
 
+class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError(_: Error) {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('AppErrorBoundary caught an error:', error, errorInfo);
+  }
+  render() {
+    return this.props.children;
+  }
+}
+
 export default function App() {
   const [ready, setReady] = useState(false);
+  const [, setCatalogVersion] = useState(0);
   const [isAdmin, setIsAdmin] = useState(() => {
     return (
       window.location.hash === '#admin' ||
@@ -43,6 +57,7 @@ export default function App() {
     getLiveProducts().then((live) => {
       if (live && live.length > 0) {
         setLiveProducts(live);
+        setCatalogVersion((v) => v + 1);
       }
     });
     getLiveSettings().then((settings) => {
@@ -69,35 +84,37 @@ export default function App() {
     );
   }
   return (
-    <StoreProvider>
-      <a className="skip" href="#arrivals">Skip to products</a>
-      <Preloader onDone={() => setReady(true)} />
-      <Announcement />
-      <Nav />
-      <main className={ready ? 'is-ready' : ''}>
-        <Hero ready={ready} />
-        <Marquee />
-        <Collections />
-        <Signatures />
-        <Arrivals />
-        <Story />
-        <Bridal />
-        <Trends />
-        <Showcase />
-        <Edits />
-        <Offers />
-        <Campaign />
-        <Latest />
-        <Info />
-        <Newsletter />
-      </main>
-      <Footer />
-      <Drawer />
-      <QuickView />
-      <OrderModal />
-      <SearchOverlay />
-      <PolicyModal />
-      <Toasts />
-    </StoreProvider>
+    <AppErrorBoundary>
+      <StoreProvider>
+        <a className="skip" href="#arrivals">Skip to products</a>
+        <Preloader onDone={() => setReady(true)} />
+        <Announcement />
+        <Nav />
+        <main className={ready ? 'is-ready' : ''}>
+          <Hero ready={ready} />
+          <Marquee />
+          <Collections />
+          <Signatures />
+          <Arrivals />
+          <Story />
+          <Bridal />
+          <Trends />
+          <Showcase />
+          <Edits />
+          <Offers />
+          <Campaign />
+          <Latest />
+          <Info />
+          <Newsletter />
+        </main>
+        <Footer />
+        <Drawer />
+        <QuickView />
+        <OrderModal />
+        <SearchOverlay />
+        <PolicyModal />
+        <Toasts />
+      </StoreProvider>
+    </AppErrorBoundary>
   );
 }

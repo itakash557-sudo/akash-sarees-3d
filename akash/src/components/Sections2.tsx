@@ -72,7 +72,9 @@ export function Bridal() {
 
 /* ───────── Trend rows ───────── */
 function TrendRow({ id }: { id: string }) {
-  const p = byId(id)!; const { add, setQuick, openOrder } = useStore();
+  const p = byId(id) || PRODUCTS[0];
+  if (!p) return null;
+  const { add, setQuick, openOrder } = useStore();
   const [size, setSize] = useState('M');
   return (
     <div className="trow">
@@ -106,16 +108,30 @@ export function Showcase() {
   const { add, toggleWish, state, setQuick, openOrder } = useStore();
   const ids = ['P001', 'P008', 'P007', 'P016', 'P003'];
   const [idx, setIdx] = useState(0);
-  const p = byId(ids[idx])!;
-  const [look, setLook] = useState(p.palette);
+  const p = byId(ids[idx]) || PRODUCTS[0];
+  const [look, setLook] = useState(p ? (p.palette || 'crimson') : 'crimson');
   const [size, setSize] = useState('M');
   const [qty, setQty] = useState(1);
   const [prev, setPrev] = useState<string | null>(null);
-  const cur = p.image;
+  const cur = p ? p.image : '';
   const last = useRef(cur);
-  useEffect(() => { setLook(byId(ids[idx])!.palette); setQty(1); }, [idx]);
-  useEffect(() => { if (last.current !== cur) { setPrev(last.current); last.current = cur; const t = setTimeout(() => setPrev(null), 900); return () => clearTimeout(t); } }, [cur]);
-  const pal = PALETTES[look] || PALETTES[p.palette];
+  useEffect(() => {
+    const item = byId(ids[idx]) || PRODUCTS[0];
+    if (item) {
+      setLook(item.palette || 'crimson');
+      setQty(1);
+    }
+  }, [idx]);
+  useEffect(() => {
+    if (last.current !== cur) {
+      setPrev(last.current);
+      last.current = cur;
+      const t = setTimeout(() => setPrev(null), 900);
+      return () => clearTimeout(t);
+    }
+  }, [cur]);
+  const pal = (look && PALETTES[look]) || (p && PALETTES[p.palette]) || PALETTES['crimson'] || { name: 'Crimson', hex: '#800020', base: '#800020', light: '#fdf2f4', shade: '#4a0013' };
+  if (!p) return null;
   const wished = state.wish.includes(p.id);
   const step = (d: number) => setIdx((idx + d + ids.length) % ids.length);
   return (
@@ -123,7 +139,11 @@ export function Showcase() {
       <div className="wrap show-grid">
         <div className="thumbs" role="tablist" aria-label="Change look">
           <span className="script hand">Change look</span>
-          {ids.map((id, i) => { const q = byId(id)!; return <button key={id} role="tab" aria-selected={i === idx} className={i === idx ? 'on' : ''} onClick={() => setIdx(i)} aria-label={q.name}><img src={q.image} alt="" /></button>; })}
+          {ids.map((id, i) => {
+            const q = byId(id) || PRODUCTS[i] || PRODUCTS[0];
+            if (!q) return null;
+            return <button key={id} role="tab" aria-selected={i === idx} className={i === idx ? 'on' : ''} onClick={() => setIdx(i)} aria-label={q.name}><img src={q.image} alt="" /></button>;
+          })}
         </div>
         <div className="stage">
           <div className="halo" />
@@ -138,11 +158,11 @@ export function Showcase() {
           <h2 className="serif-xl caps" key={p.id}>{p.name}</h2>
           <p className="price big">{inr(p.price)}{p.mrp ? <s>{inr(p.mrp)}</s> : null}</p>
           <p className="lead small">{p.desc}</p>
-          <ul className="spec-icons">{p.specs.map((s) => <li key={s.label}><b>{s.label}</b><span>{s.value}</span></li>)}</ul>
+          <ul className="spec-icons">{(p.specs || []).map((s) => <li key={s.label}><b>{s.label}</b><span>{s.value}</span></li>)}</ul>
           <p className="label">Select blouse size</p>
           <div className="chips" role="group" aria-label="Blouse size">{['S', 'M', 'L', 'XL', '2XL'].map((s) => <button key={s} className={s === size ? 'on' : ''} onClick={() => setSize(s)} aria-pressed={s === size}>{s}</button>)}</div>
           <p className="label">Select colour — <b>{pal.name}</b></p>
-          <div className="swatch-row">{p.looks.map((k) => <button key={k} className={k === look ? 'on' : ''} style={{ background: PALETTES[k]?.base || '#800020' }} onClick={() => setLook(k)} aria-pressed={k === look} aria-label={PALETTES[k]?.name || k} />)}</div>
+          <div className="swatch-row">{(p.looks || [p.palette || 'crimson']).map((k) => <button key={k} className={k === look ? 'on' : ''} style={{ background: PALETTES[k]?.base || '#800020' }} onClick={() => setLook(k)} aria-pressed={k === look} aria-label={PALETTES[k]?.name || k} />)}</div>
           <div className="buy-row">
             <div className="qty"><button onClick={() => setQty(Math.max(1, qty - 1))} aria-label="Decrease"><IconMinus size={14} /></button><span>{qty}</span><button onClick={() => setQty(Math.min(p.stock, qty + 1))} aria-label="Increase"><IconPlus size={14} /></button></div>
             <button className="btn-icon" onClick={() => setQuick(p.id)} aria-label="Quick view">i</button>

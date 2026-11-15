@@ -86,7 +86,9 @@ export function Campaign() {
     return () => { t.removeEventListener('pointerdown', d); window.removeEventListener('pointermove', m); window.removeEventListener('pointerup', u); };
   }, [pinned]);
 
-  const p = items[i]; const pal = PALETTES[p.palette] || PALETTES['crimson'];
+  const p = items[i] || items[0] || PRODUCTS[0];
+  const pal = (p && PALETTES[p.palette]) || PALETTES['crimson'] || { name: 'Crimson', base: '#800020', shade: '#4a0013' };
+  if (!p) return null;
   return (
     <section id="campaign" ref={sec} className="campaign" style={{ height: pinned ? `${items.length * 62 + 100}vh` : 'auto', ['--c1' as any]: pal.base, ['--c2' as any]: pal.shade }}>
       <div className="camp-stage">

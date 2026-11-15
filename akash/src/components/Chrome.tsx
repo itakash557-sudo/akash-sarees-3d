@@ -167,7 +167,7 @@ export function Drawer() {
         {panel === 'wish' ? (
           <div className="drawer-body">
             {state.wish.length === 0 && <p className="empty">Your wishlist is empty. Tap the heart on any saree to save it.</p>}
-            {state.wish.map((id) => { const p = byId(id)!; return (
+            {state.wish.map((id) => { const p = byId(id); if (!p) return null; return (
               <div className="line" key={id}>
                 <img src={p.image} alt="" />
                 <div><h4>{p.name}</h4><p className="muted">{p.fabric}</p><p className="price">{inr(p.price)}</p>
@@ -184,12 +184,12 @@ export function Drawer() {
           <>
             <div className="drawer-body">
               {lines.length === 0 && <p className="empty">Your cart is empty.</p>}
-              {lines.map((l) => { const p = byId(l.id)!; return (
+              {lines.map((l) => { const p = byId(l.id); if (!p) return null; return (
                 <div className="line" key={`${l.id}${l.size}${l.look}`}>
-                  <img src={p.real && l.look === p.palette ? p.image : sareeArt(l.look, p.variant)} alt="" />
+                  <img src={p.real && l.look === p.palette ? p.image : sareeArt(l.look, p.variant || 0)} alt="" />
                   <div>
                     <h4>{p.name}</h4>
-                    <p className="muted">{PALETTES[l.look]?.name} · Blouse {l.size}</p>
+                    <p className="muted">{PALETTES[l.look]?.name || l.look} · Blouse {l.size}</p>
                     <p className="price">{inr(p.price)}</p>
                     <div className="line-actions">
                       <div className="qty" role="group" aria-label={`Quantity for ${p.name}`}>
@@ -245,8 +245,8 @@ export function QuickView() {
           <h3>{p.name}</h3>
           <p className="price big">{inr(p.price)}{p.mrp ? <s>{inr(p.mrp)}</s> : null}</p>
           <p className="muted">{p.desc}</p>
-          <p className="label">Colour — <b>{PALETTES[look || p.palette]?.name}</b></p>
-          <div className="swatch-row">{p.looks.map((k) => <button key={k} className={k === look ? 'on' : ''} style={{ background: PALETTES[k].base }} onClick={() => setLook(k)} aria-label={PALETTES[k].name} aria-pressed={k === look} />)}</div>
+          <p className="label">Colour — <b>{PALETTES[look || p.palette]?.name || look || p.palette}</b></p>
+          <div className="swatch-row">{(p.looks || [p.palette]).map((k) => <button key={k} className={k === look ? 'on' : ''} style={{ background: PALETTES[k]?.base || '#800020' }} onClick={() => setLook(k)} aria-label={PALETTES[k]?.name || k} aria-pressed={k === look} />)}</div>
           <p className="label">Blouse size</p>
           <div className="chips">{['S', 'M', 'L', 'XL', '2XL'].map((s) => <button key={s} className={s === size ? 'on' : ''} onClick={() => setSize(s)} aria-pressed={s === size}>{s}</button>)}</div>
           <div className="buy-row">
@@ -287,7 +287,7 @@ export function SearchOverlay() {
   useEsc(searchOpen, () => setSearchOpen(false)); useLock(searchOpen);
   useEffect(() => { if (searchOpen) { setQ(''); setTimeout(() => input.current?.focus(), 60); } }, [searchOpen]);
   const t = q.trim().toLowerCase();
-  const res = t ? PRODUCTS.filter((p) => [p.name, p.fabric, collectionBySlug(p.collection)?.name, PALETTES[p.palette].name, ...p.looks.map((k) => PALETTES[k].name)].join(' ').toLowerCase().includes(t)) : [];
+  const res = t ? PRODUCTS.filter((p) => [p.name, p.fabric, collectionBySlug(p.collection)?.name, p.palette && PALETTES[p.palette]?.name, ...(p.looks || []).map((k) => PALETTES[k]?.name)].filter(Boolean).join(' ').toLowerCase().includes(t)) : [];
   return (
     <div className={`search-wrap ${searchOpen ? 'open' : ''}`} aria-hidden={!searchOpen}>
       <div className="scrim" onClick={() => setSearchOpen(false)} />
