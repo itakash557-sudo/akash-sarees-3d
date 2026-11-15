@@ -119,16 +119,63 @@ export function AdminDashboard({ onExit }: { onExit: () => void }) {
     setTimeout(() => setPassNotice(null), 3000);
   };
 
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxW = 900;
+        const maxH = 1200;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxW || h > maxH) {
+          if (w / h > maxW / maxH) {
+            h = Math.round((h * maxW) / w);
+            w = maxW;
+          } else {
+            w = Math.round((w * maxH) / h);
+            h = maxH;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setEditingProduct((prev) => (prev ? { ...prev, image: dataUrl } : null));
+        }
+      };
+      img.src = ev.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingProduct?.name || !editingProduct?.price) return;
+    if (!editingProduct?.name?.trim()) {
+      alert('Please enter a saree title / name');
+      return;
+    }
+    if (!editingProduct?.price || Number(editingProduct.price) <= 0) {
+      alert('Please enter a valid price for the saree');
+      return;
+    }
+    if (!editingProduct?.image?.trim()) {
+      alert('Please upload a photo for the saree');
+      return;
+    }
     setSaving(true);
     try {
       const pid = editingProduct.id || `P${String(products.length + 1).padStart(3, '0')}`;
       const payload = {
         id: pid,
-        name: editingProduct.name,
-        slug: editingProduct.slug || editingProduct.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        name: editingProduct.name.trim(),
+        slug: editingProduct.slug || editingProduct.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
         fabric: editingProduct.fabric || 'Pure Silk',
         collection: editingProduct.collection || 'wedding',
         palette: editingProduct.palette || 'maroon',
@@ -138,7 +185,7 @@ export function AdminDashboard({ onExit }: { onExit: () => void }) {
         is_new: Boolean(editingProduct.isNew),
         is_best: Boolean(editingProduct.isBest),
         description: editingProduct.desc || '',
-        image: editingProduct.image || 'photos/products/suhag-bridal-kanjivaram.jpg',
+        image: editingProduct.image,
       };
 
       const result = await upsertProduct(payload);
@@ -450,11 +497,13 @@ on conflict (key) do nothing;`;
                     name: '',
                     fabric: 'Kanchipuram Silk',
                     collection: 'kanchipuram',
-                    price: 15000,
+                    palette: 'crimson',
+                    price: '' as any,
+                    mrp: '' as any,
                     stock: 10,
                     isNew: true,
                     isBest: false,
-                    image: 'photos/products/suhag-bridal-kanjivaram.jpg',
+                    image: '',
                     desc: '',
                   });
                   setModalOpen(true);
@@ -789,15 +838,90 @@ on conflict (key) do nothing;`;
               </div>
 
               <div className="form-group">
-                <label>Saree Photo Image URL / Path *</label>
-                <input
-                  type="text"
-                  required
-                  value={editingProduct.image || ''}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, image: e.target.value })}
-                  placeholder="photos/products/suhag-bridal-kanjivaram.jpg or https://..."
-                />
-                <small>You can use existing saree paths or external image URLs</small>
+                <label>Saree Photo *</label>
+                <div style={{ display: 'flex', gap: 16, alignItems: 'center', margin: '8px 0 12px' }}>
+                  {editingProduct.image ? (
+                    <div style={{ position: 'relative', width: 90, height: 110, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(224, 178, 90, 0.4)', background: '#000', flexShrink: 0 }}>
+                      <img
+                        src={editingProduct.image}
+                        alt="Preview"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setEditingProduct({ ...editingProduct, image: '' })}
+                        style={{
+                          position: 'absolute',
+                          top: 4,
+                          right: 4,
+                          background: 'rgba(0,0,0,0.7)',
+                          color: '#ff6b6b',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: 22,
+                          height: 22,
+                          cursor: 'pointer',
+                          fontSize: 14,
+                          lineHeight: '22px',
+                          textAlign: 'center',
+                          padding: 0,
+                        }}
+                        title="Remove photo"
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ width: 90, height: 110, borderRadius: 8, border: '2px dashed rgba(246, 236, 228, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cdb9ad', fontSize: '0.75rem', textAlign: 'center', padding: 4, flexShrink: 0 }}>
+                      No Photo Selected
+                    </div>
+                  )}
+
+                  <div style={{ flex: 1 }}>
+                    <label
+                      htmlFor="saree-photo-file"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        background: 'rgba(224, 178, 90, 0.15)',
+                        border: '1px solid rgba(224, 178, 90, 0.5)',
+                        color: '#e0b25a',
+                        padding: '10px 18px',
+                        borderRadius: 6,
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        fontSize: '0.9rem',
+                        marginBottom: 8,
+                      }}
+                    >
+                      📸 {editingProduct.image ? 'Change Saree Photo' : 'Upload Photo from Device'}
+                    </label>
+                    <input
+                      id="saree-photo-file"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageFileChange}
+                      style={{ display: 'none' }}
+                    />
+                    <div style={{ color: '#cdb9ad', fontSize: '0.75rem' }}>
+                      Choose JPG, PNG, or WEBP from your phone or PC.
+                    </div>
+                  </div>
+                </div>
+
+                <details style={{ marginTop: 8 }}>
+                  <summary style={{ cursor: 'pointer', color: '#cdb9ad', fontSize: '0.8rem' }}>
+                    Or enter Image URL / existing path manually
+                  </summary>
+                  <input
+                    type="text"
+                    value={editingProduct.image || ''}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, image: e.target.value })}
+                    placeholder="photos/products/... or https://..."
+                    style={{ marginTop: 8 }}
+                  />
+                </details>
               </div>
 
               <div className="form-group">
