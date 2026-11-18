@@ -46,7 +46,7 @@ export async function getLiveProducts(): Promise<Product[] | null> {
       .select('*')
       .order('id', { ascending: true });
 
-    if (!error && data && data.length > 0) {
+    if (!error && Array.isArray(data)) {
       const mapped: Product[] = data.map((d: DbProduct) => ({
         id: d.id,
         slug: d.slug,
@@ -86,7 +86,7 @@ export async function getLiveProducts(): Promise<Product[] | null> {
     const cached = localStorage.getItem(LOCAL_PRODUCTS_KEY);
     if (cached) {
       const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch {}
 

@@ -11,8 +11,8 @@ import {
 import { inr } from '../lib/hooks';
 import { site } from '../config/site';
 
-const DEFAULT_USERS = ['admin', 'akash'];
-const DEFAULT_PASSWORDS = ['akash2026', 'akash@2026'];
+const ADMIN_USERNAME = 'Akash@Username';
+const ADMIN_PASSWORD = 'Demo@Password';
 
 export function AdminDashboard({ onExit }: { onExit: () => void }) {
   const [authed, setAuthed] = useState(() => localStorage.getItem('akash_admin_auth') === 'true');
@@ -60,7 +60,7 @@ export function AdminDashboard({ onExit }: { onExit: () => void }) {
     setDbReady(ready);
 
     const live = await getLiveProducts();
-    if (live && live.length > 0) {
+    if (live) {
       setProducts(live);
     }
     const liveSettings = await getLiveSettings();
@@ -77,23 +77,26 @@ export function AdminDashboard({ onExit }: { onExit: () => void }) {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    const u = usernameInput.trim().toLowerCase();
+    const u = usernameInput.trim();
     const p = passwordInput.trim();
 
-    // Check custom saved credentials or defaults
+    // Check custom saved credentials or default
     const customUser = localStorage.getItem('akash_custom_admin_user');
     const customPass = localStorage.getItem('akash_custom_admin_pass');
 
-    const isValidUser = customUser ? u === customUser.toLowerCase() : DEFAULT_USERS.includes(u);
-    const isValidPass = customPass ? p === customPass : DEFAULT_PASSWORDS.includes(p);
+    const expectedUser = customUser || ADMIN_USERNAME;
+    const expectedPass = customPass || ADMIN_PASSWORD;
+
+    const isValidUser = u.toLowerCase() === expectedUser.toLowerCase();
+    const isValidPass = p === expectedPass;
 
     if (isValidUser && isValidPass) {
       localStorage.setItem('akash_admin_auth', 'true');
-      localStorage.setItem('akash_admin_username', u || 'admin');
+      localStorage.setItem('akash_admin_username', expectedUser);
       setAuthed(true);
       setAuthError(null);
     } else {
-      setAuthError('Incorrect username or password. Default: admin / akash2026');
+      setAuthError('Invalid username or password. Please try again.');
     }
   };
 
@@ -207,15 +210,19 @@ export function AdminDashboard({ onExit }: { onExit: () => void }) {
   const handleDelete = async (id: string, name: string) => {
     if (!window.confirm(`Are you sure you want to delete "${name}" (${id})?`)) return;
     try {
+      // Optimistically remove from state immediately
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+
       const res = await deleteProduct(id);
       if (res.cloud) {
-        showNotice(`Deleted "${name}" from Supabase cloud`);
+        showNotice(`✓ Deleted "${name}" from database`);
       } else {
-        showNotice(`Deleted "${name}" locally`);
+        showNotice(`✓ Deleted "${name}" locally`);
       }
       await loadData();
     } catch (err: any) {
-      alert('Error deleting: ' + err.message);
+      alert('Error deleting: ' + (err.message || 'Check database connection'));
+      await loadData();
     }
   };
 
@@ -315,7 +322,7 @@ on conflict (key) do nothing;`;
             <label>Username</label>
             <input
               type="text"
-              placeholder="e.g. admin or akash"
+              placeholder=""
               value={usernameInput}
               onChange={(e) => {
                 setUsernameInput(e.target.value);
@@ -329,7 +336,7 @@ on conflict (key) do nothing;`;
             <div style={{ position: 'relative' }}>
               <input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="e.g. akash2026"
+                placeholder=""
                 value={passwordInput}
                 onChange={(e) => {
                   setPasswordInput(e.target.value);
